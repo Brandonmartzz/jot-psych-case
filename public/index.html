@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Video Generator</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 60px auto; padding: 0 20px; }
+    input, button { padding: 10px; font-size: 16px; }
+    input { width: 70%; }
+    video { width: 100%; margin-top: 20px; }
+    #status { margin-top: 10px; color: #666; }
+  </style>
+</head>
+<body>
+  <h1>Video Generator</h1>
+  <input id="prompt" placeholder="Describe a video..." />
+  <button onclick="generate()">Generate</button>
+  <p id="status"></p>
+  <video id="result" controls style="display:none;"></video>
+
+  <script>
+    async function generate() {
+      const prompt = document.getElementById("prompt").value;
+      const statusEl = document.getElementById("status");
+      const videoEl = document.getElementById("result");
+      videoEl.style.display = "none";
+      statusEl.textContent = "Starting...";
+
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      });
+      const { requestId } = await res.json();
+
+      statusEl.textContent = "Generating video, this can take a minute...";
+      poll(requestId);
+    }
+
+    async function poll(requestId) {
+      const res = await fetch(`/api/status/${requestId}`);
+      const data = await res.json();
+
+      if (data.status === "done") {
+        document.getElementById("status").textContent = "Done!";
+        const videoEl = document.getElementById("result");
+        videoEl.src = data.videoUrl;
+        videoEl.style.display = "block";
+        return;
+      }
+      setTimeout(() => poll(requestId), 3000);
+    }
+  </script>
+</body>
+</html>
