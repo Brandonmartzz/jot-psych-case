@@ -90,7 +90,11 @@ app.post("/api/generate", async (req, res) => {
     try {
       console.log("Submitting video job to primary model...");
       videoJob = await fal.queue.submit(VIDEO_MODEL, {
-        input: { prompt: videoPrompt, duration: 15 },
+        input: { 
+          prompt: videoPrompt, 
+          duration: 15,
+          aspect_ratio: "9:16" 
+        },
       });
     } catch (primaryErr) {
       console.warn("Primary video model failed with downstream error, using fallback prompt...", primaryErr.message);
@@ -98,7 +102,11 @@ app.post("/api/generate", async (req, res) => {
       const fallbackPrompt = `A vertical phone screen video of a ${animal} acting like a human, professional office setting, purple and pink ambient lighting, high quality, realistic.`;
       
       videoJob = await fal.queue.submit(VIDEO_MODEL, {
-        input: { prompt: fallbackPrompt, duration: 10 },
+        input: { 
+          prompt: fallbackPrompt, 
+          duration: 10,
+          aspect_ratio: "9:16" 
+        },
       });
     }
 
