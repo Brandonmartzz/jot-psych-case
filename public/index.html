@@ -1,53 +1,131 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Video Generator</title>
+  <title>JotPsych Feature Video Generator</title>
   <style>
-    body { font-family: sans-serif; max-width: 600px; margin: 60px auto; padding: 0 20px; }
-    input, button { padding: 10px; font-size: 16px; }
-    input { width: 70%; }
-    video { width: 100%; margin-top: 20px; }
-    #status { margin-top: 10px; color: #666; }
+    body {
+      font-family: sans-serif;
+      max-width: 500px;
+      margin: 60px auto;
+      padding: 0 20px;
+      background: #FFF2F5;
+      color: #1C1E85;
+    }
+    h1 { color: #1E125E; }
+    input, button {
+      padding: 10px;
+      font-size: 16px;
+    }
+    input {
+      width: 65%;
+      border: 2px solid #813FE8;
+      border-radius: 6px;
+    }
+    button {
+      background: #813FE8;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover { background: #1E125E; }
+    #status { margin-top: 10px; color: #1E125E; }
+    #videoWrap {
+      display: none;
+      margin-top: 20px;
+      border: 10px solid #813FE8;
+      background: #FD96C9;
+      border-radius: 12px;
+      padding: 8px;
+      max-width: 320px;
+    }
+    video {
+      width: 100%;
+      display: block;
+      border-radius: 6px;
+    }
   </style>
 </head>
 <body>
-  <h1>Video Generator</h1>
-  <input id="prompt" placeholder="Describe a video..." />
-  <button onclick="generate()">Generate</button>
+  <h1>JotPsych Feature Video Generator</h1>
+  <input id="feature" placeholder="Describe a JotPsych feature..." />
+  <button onclick="generate()">Go</button>
   <p id="status"></p>
-  <video id="result" controls style="display:none;"></video>
+
+  <div id="videoWrap">
+    <video id="result" controls>
+      <track id="subs" kind="subtitles" srclang="en" default>
+    </video>
+  </div>
 
   <script>
     async function generate() {
-      const prompt = document.getElementById("prompt").value;
+      const feature = document.getElementById("feature").value;
       const statusEl = document.getElementById("status");
-      const videoEl = document.getElementById("result");
-      videoEl.style.display = "none";
-      statusEl.textContent = "Starting...";
+      const videoWrap = document.getElementById("videoWrap");
+      videoWrap.style.display = "none";
+      statusEl.textContent = "Writing the script...";
 
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ feature }),
       });
-      const { requestId } = await res.json();
 
-      statusEl.textContent = "Generating video, this can take a minute...";
-      poll(requestId);
+      if (!res.ok) {
+        statusEl.textContent = "Something went wrong. Try again.";
+        return;
+      }
+
+      const { videoRequestId, audioUrl, script } = await res.json();
+      statusEl.textContent = "Generating video...";
+      pollVideo(videoRequestId, audioUrl, script);
     }
 
-    async function poll(requestId) {
-      const res = await fetch(`/api/status/${requestId}`);
+    async function pollVideo(requestId, audioUrl, script) {
+      const res = await fetch(`/api/status/video/${requestId}?audioUrl=${encodeURIComponent(audioUrl)}`);
+      const data = await res.json();
+
+      if (data.status === "lipsync_started") {
+        document.getElementById("status").textContent = "Syncing lips to audio...";
+        pollLipsync(data.lipsyncRequestId, script);
+        return;
+      }
+
+      if (data.error) {
+        document.getElementById("status").textContent = "Generation failed. Try again.";
+        return;
+      }
+
+      setTimeout(() => pollVideo(requestId, audioUrl, script), 3000);
+    }
+
+    async function pollLipsync(requestId, script) {
+      const res = await fetch(`/api/status/lipsync/${requestId}`);
       const data = await res.json();
 
       if (data.status === "done") {
         document.getElementById("status").textContent = "Done!";
         const videoEl = document.getElementById("result");
         videoEl.src = data.videoUrl;
-        videoEl.style.display = "block";
+
+        const vtt = `WEBVTT
+
+00:00:00.000 --> 00:00:15.000
+${script}`;
+        const blob = new Blob([vtt], { type: "text/vtt" });
+        document.getElementById("subs").src = URL.createObjectURL(blob);
+
+        document.getElementById("videoWrap").style.display = "inline-block";
         return;
       }
-      setTimeout(() => poll(requestId), 3000);
+
+      if (data.error) {
+        document.getElementById("status").textContent = "Lipsync failed. Try again.";
+        return;
+      }
+
+      setTimeout(() => pollLipsync(requestId, script), 3000);
     }
   </script>
 </body>
