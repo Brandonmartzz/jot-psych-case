@@ -28,7 +28,7 @@ async function generateScript(feature, attempt = 1) {
     },
     body: JSON.stringify({
       model: "claude-sonnet-5",
-      max_tokens: 400,
+      max_tokens: 600,
       thinking: { type: "disabled" },
       messages: [{
         role: "user",
@@ -36,10 +36,14 @@ async function generateScript(feature, attempt = 1) {
 
 Write a script of 30 to 60 words — not shorter, not much longer. This is a strict requirement, count your words before responding.
 
-Make it genuinely FUNNY, not just cheerful. Include an actual joke: a pun, a punchline, a self-aware quip, or an unexpected comparison. Structure it like a tiny stand-up bit — a setup, then a twist or payoff — not just an enthusiastic description. Imagine this is good enough that JotPsych would post it on their own social media as real marketing content, not just an explainer. This description has to match what the actual features does. 
+Make it genuinely FUNNY, not just cheerful. Include an actual joke: a pun, a punchline, a self-aware quip, or an unexpected comparison. Structure it like a tiny stand-up bit — a setup, then a twist or payoff.
 
-Respond ONLY with raw JSON, no markdown fences, no preamble:
-{"animal": "a specific fun animal", "script": "your 30-40 word script here, with a real joke in it", "videoPrompt": "A video of [that animal] acting like a human and speaking what the scripts says, the video of the animal has to contain jotpsych colors [Midnight #1C1E85, Deep #1E125E, Warm #FFF2F5, Sunset #FD96C9, Afterglow #813FE8] make it maybe like a glow or lights, make the video creative and funny of this animal, realistic, and make what the animal does match what his decribing, the video has to be the size of a phone, make it like if it was seen form a phone, vertically, shape of a phone screen"}`
+Respond ONLY with raw JSON, no markdown fences, no preamble, and NO actual line breaks inside the string values (keep all text for each field on a single line):
+{
+  "animal": "a specific fun animal",
+  "script": "your script here with a real joke",
+  "videoPrompt": "A realistic and funny video of the chosen animal acting like a human and speaking what the script says, shaped like a vertical phone screen. The video must feature JotPsych brand colors [Midnight #1C1E85, Deep #1E125E, Warm #FFF2F5, Sunset #FD96C9, Afterglow #813FE8] integrated as ambient glow or lights, and the animal's actions must match what is being described."
+}`
       }],
     }),
   });
@@ -49,8 +53,20 @@ Respond ONLY with raw JSON, no markdown fences, no preamble:
   if (!textBlock) {
     throw new Error("Anthropic API error: " + JSON.stringify(data));
   }
-  const text = textBlock.text.replace(/```json|```/g, "").trim();
-  const result = JSON.parse(text);
+
+  let text = textBlock.text.replace(/```json|```/g, "").trim();
+
+  let result;
+  try {
+    result = JSON.parse(text);
+  } catch (e) {
+    console.error("Failed to parse JSON string. Raw text was:", text);
+    if (attempt < 2) {
+      console.log("Retrying generation due to JSON parse error...");
+      return generateScript(feature, attempt + 1);
+    }
+    throw new Error("Model returned malformed JSON after retry.");
+  }
 
   const wordCount = result.script.trim().split(/\s+/).length;
   console.log(`Script word count: ${wordCount} (attempt ${attempt})`);
