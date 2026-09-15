@@ -42,7 +42,7 @@ Respond ONLY with raw JSON, no markdown fences, no preamble, and NO actual line 
 {
   "animal": "a specific fun animal",
   "script": "your script here with a real joke",
-  "videoPrompt": "A realistic and funny video of the chosen animal acting like a human and speaking what the script says, shaped like a vertical phone screen. The video must feature JotPsych brand colors [Midnight #1C1E85, Deep #1E125E, Warm #FFF2F5, Sunset #FD96C9, Afterglow #813FE8] integrated as ambient glow or lights, and the animal's actions must match what is being described."
+  "videoPrompt": "A realistic and funny video of the chosen animal acting like a human and speaking what the script says, it has to show the mouth and face of the animal during the video to lipsync, shaped like a vertical phone screen. The video must feature JotPsych brand colors [Midnight #1C1E85, Deep #1E125E, Warm #FFF2F5, Sunset #FD96C9, Afterglow #813FE8] integrated as ambient glow or lights, and the animal's actions must match what is being described."
 }`
       }],
     }),
