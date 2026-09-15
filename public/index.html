@@ -114,12 +114,32 @@
         const videoEl = document.getElementById("result");
         videoEl.src = data.videoUrl;
 
-        const vtt = `WEBVTT
+        // --- DYNAMIC WORD-PROPORTIONAL SUBTITLES ---
+        const words = script.trim().split(/\s+/);
+        const chunkSize = 4; // Words per subtitle card
+        
+        // Estimate total audio duration based on average speaking rate (~2.5 words per second)
+        const estimatedDuration = Math.max(8, words.length / 2.5); 
+        const secondsPerWord = estimatedDuration / words.length;
 
-00:00:00.000 --> 00:00:15.000
-${script}`;
+        let vtt = "WEBVTT\n\n";
+        let currentTime = 0;
+
+        for (let i = 0; i < words.length; i += chunkSize) {
+          const chunkWords = words.slice(i, i + chunkSize);
+          const chunkText = chunkWords.join(" ");
+          
+          const startTime = currentTime;
+          const duration = chunkWords.length * secondsPerWord;
+          currentTime += duration;
+          const endTime = currentTime;
+
+          vtt += `${formatTime(startTime)} --> ${formatTime(endTime)}\n${chunkText}\n\n`;
+        }
+
         const blob = new Blob([vtt], { type: "text/vtt" });
         document.getElementById("subs").src = URL.createObjectURL(blob);
+        // ------------------------------------------
 
         document.getElementById("videoWrap").style.display = "inline-block";
         return;
@@ -131,6 +151,14 @@ ${script}`;
       }
 
       setTimeout(() => pollLipsync(requestId, script), 3000);
+    }
+
+    // Helper to format seconds into WebVTT timestamp format (HH:MM:SS.mmm)
+    function formatTime(totalSeconds) {
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = Math.floor(totalSeconds % 60);
+      const milliseconds = Math.floor((totalSeconds % 1) * 1000);
+      return `00:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(milliseconds).padStart(3, '0')}`;
     }
   </script>
 </body>
